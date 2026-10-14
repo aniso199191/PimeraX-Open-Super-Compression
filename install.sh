@@ -1,39 +1,31 @@
 #!/bin/bash
-# PimeraX 一键安装脚本
-# 编译 pimerax + 安装 prx 压缩工具到系统
+# PimeraX Open Super Compression 一键安装脚本
+# 只装 PRX 压缩工具（纯 Python），不含 C++ 框架。
+# 需要 C++ 推理框架请去 PimeraX 仓：github.com/aniso199191/PimeraX
 
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
-echo "=== PimeraX 安装 ==="
+echo "=== PimeraX Open Super Compression 安装 ==="
 
-# 1. 编译 C++ 框架
-echo "[1/3] 编译 pimerax..."
-g++ -O3 -std=c++17 -o "$DIR/pimerax" "$DIR/pimerax.cpp"
-echo "  ✔ pimerax 编译完成"
-
-# 2. 安装到 PATH（可选，需要 sudo）
-if [ "$1" = "--system" ]; then
-    sudo cp "$DIR/pimerax" /usr/local/bin/pimerax
-    echo "  ✔ 已安装到 /usr/local/bin/pimerax"
-else
-    echo "  提示: 加 --system 参数可安装到 /usr/local/bin"
-fi
-
-# 3. 验证
-echo "[2/3] 验证..."
-"$DIR/pimerax" 2>&1 | head -1
-
-# 4. Python 压缩工具
-echo "[3/3] PRX 压缩工具..."
+# 1. Python 依赖
+echo "[1/2] 检查 Python 依赖..."
 if command -v python3 &>/dev/null; then
-    python3 -c "import zstandard" 2>/dev/null || pip3 install zstandard 2>/dev/null || echo "  ⚠ zstandard 未装，prx 压缩功能受限"
-    echo "  ✔ prx.py 可用: python3 prx.py 转 <模型.pt> <输出.prx>"
+    python3 -c "import zstandard" 2>/dev/null && echo "  ✔ zstandard 已有" || {
+        pip3 install zstandard 2>/dev/null && echo "  ✔ zstandard 已装" || echo "  ⚠ zstandard 装不上，xz 兜底仍可用"
+    }
+    python3 -c "import torch" 2>/dev/null && echo "  ✔ torch 已有" || echo "  ⚠ torch 未装（转 .pt 需要它）"
+else
+    echo "  ✗ 需要 python3"
+    exit 1
 fi
+
+# 2. 验证
+echo "[2/2] 验证..."
+python3 "$DIR/prx.py" 2>&1 | head -2
 
 echo ""
 echo "=== 安装完成 ==="
 echo "用法:"
-echo "  ./pimerax info <模型.prx>      # 查看模型"
-echo "  ./pimerax gen <模型.prx>       # 生成"
-echo "  python3 prx.py 转 <模型.pt> <输出.prx>   # 转换+压缩"
-echo "  python3 prx.py 压 <模型.prx> <输出.prx>  # 超压缩"
+echo "  python3 prx.py 转 <模型.pt> <输出.prx>   # 量化+压缩"
+echo "  python3 prx.py 压 <模型.prx> <输出.prx.sc> # 超压缩"
+echo "  python3 prx.py 解 <压缩.prx.sc> <还原.prx> # 解压"
